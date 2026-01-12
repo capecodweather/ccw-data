@@ -1,5 +1,8 @@
 name: Update Current Conditions
 
+permissions:
+  contents: write
+
 on:
   schedule:
     - cron: "*/10 * * * *"
