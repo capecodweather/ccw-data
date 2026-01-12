@@ -56,7 +56,7 @@ def parse_metar(metar):
             condition = "unknown"
 
     return {
-        "station_id": "HYA",
+        "station_id": "KHYA",
         "location_name": "Hyannis Area",
         "temperature_f": temperature_f,
         "wind_direction": wind_direction,
@@ -73,7 +73,7 @@ def main():
     response = requests.get(url, timeout=20)
     response.raise_for_status()
 
-    station_metar = extract_station_metar(response.text, "HYA")
+    station_metar = extract_station_metar(response.text, "KHYA")
     if not station_metar:
         raise RuntimeError("HYA METAR not found in cycle file")
 
