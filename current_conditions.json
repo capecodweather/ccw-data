@@ -4,6 +4,6 @@
   "temperature_f": 25,
   "wind_direction": "N",
   "wind_speed_mph": 0,
-  "condition": "clear",
-  "observed_at": "2026-01-17T09:56:00+00:00"
+  "condition": "cloudy",
+  "observed_at": "2026-01-17T10:56:00+00:00"
 }
