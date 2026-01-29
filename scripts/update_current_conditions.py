@@ -1,10 +1,12 @@
 import json
-import re
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 import requests
 
 OUTPUT_FILE = "current_conditions.json"
+
+STATION = "KHYA"
+NWS_URL = f"https://api.weather.gov/stations/{STATION}/observations/latest"
 
 
 def degrees_to_compass(deg):
@@ -18,86 +20,69 @@ def degrees_to_compass(deg):
     return directions[ix]
 
 
-def parse_metar_time_to_local_iso(metar):
-    m = re.search(r"\b(\d{2})(\d{2})(\d{2})Z\b", metar)
-    if not m:
-        return datetime.now(timezone.utc).astimezone().isoformat()
+def c_to_f(c):
+    return int(round(c * 9 / 5 + 32))
 
-    day = int(m.group(1))
-    hour = int(m.group(2))
-    minute = int(m.group(3))
 
-    now_utc = datetime.now(timezone.utc)
+def mps_to_mph(ms):
+    return int(round(ms * 2.23694))
 
-    obs_utc = now_utc.replace(
-        day=day,
-        hour=hour,
-        minute=minute,
-        second=0,
-        microsecond=0,
+
+def main():
+
+    print("Fetching NWS observation:", NWS_URL)
+
+    headers = {
+        "User-Agent": "CapeCodWeather App (contact: capecodweather.net)"
+    }
+
+    resp = requests.get(NWS_URL, headers=headers, timeout=20)
+    resp.raise_for_status()
+
+    obs = resp.json()["properties"]
+
+    # Temperature
+    temp_c = obs["temperature"]["value"]
+    temperature_f = c_to_f(temp_c) if temp_c is not None else 0
+
+    # Wind
+    wind_speed_ms = obs["windSpeed"]["value"]
+    wind_dir_deg = obs["windDirection"]["value"]
+
+    if wind_speed_ms is None:
+        wind_speed_mph = 0
+    else:
+        wind_speed_mph = mps_to_mph(wind_speed_ms)
+
+    if wind_dir_deg is None:
+        wind_direction = "--"
+    else:
+        wind_direction = degrees_to_compass(wind_dir_deg)
+
+    # Condition text → simplified category
+    desc = (obs["textDescription"] or "").lower()
+
+    if "snow" in desc:
+        condition = "snow"
+    elif "rain" in desc or "shower" in desc:
+        condition = "rain"
+    elif "cloud" in desc or "overcast" in desc:
+        condition = "cloudy"
+    elif "clear" in desc or "sunny" in desc:
+        condition = "clear"
+    else:
+        condition = "unknown"
+
+    # Observation time
+    timestamp = obs["timestamp"]
+    observed_at = (
+        datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+        .astimezone()
+        .isoformat()
     )
 
-    if obs_utc > now_utc + timedelta(hours=1):
-        obs_utc = obs_utc - timedelta(days=1)
-
-    return obs_utc.astimezone().isoformat()
-
-
-def get_cycle_url():
-    now_utc = datetime.now(timezone.utc)
-    cycle = now_utc.strftime("%HZ")  # e.g. "23Z"
-    return "https://tgftp.nws.noaa.gov/data/observations/metar/cycles/{c}.TXT".format(c=cycle)
-
-
-def extract_station_metar(text, station):
-    prefix = station + " "
-    for line in text.splitlines():
-        if line.startswith(prefix):
-            return line.strip()
-    return None
-
-
-def parse_metar(metar):
-    observed_at = parse_metar_time_to_local_iso(metar)
-
-    temp_match = re.search(r"\b(M?\d{1,2})/(M?\d{1,2})\b", metar)
-    temperature_f = 0
-    if temp_match:
-        temp_c = int(temp_match.group(1).replace("M", "-"))
-        temperature_f = int(round(temp_c * 9.0 / 5.0 + 32.0))
-
-    wind_direction = "--"
-    wind_speed_mph = 0
-
-    wind_deg_match = re.search(r"\b(\d{3})(\d{2})KT\b", metar)
-    if wind_deg_match:
-        wind_deg = int(wind_deg_match.group(1))
-        wind_kt = int(wind_deg_match.group(2))
-        wind_direction = degrees_to_compass(wind_deg)
-        wind_speed_mph = int(round(wind_kt * 1.15078))
-    else:
-        wind_vrb_match = re.search(r"\bVRB(\d{2})KT\b", metar)
-        if wind_vrb_match:
-            wind_kt = int(wind_vrb_match.group(1))
-            wind_direction = "VRB"
-            wind_speed_mph = int(round(wind_kt * 1.15078))
-
-    if re.search(r"\bSN\b", metar):
-        condition = "snow"
-    elif re.search(r"\bRA\b", metar):
-        condition = "rain"
-    else:
-        if re.search(r"\b(OVC|BKN)\d{3}\b", metar):
-            condition = "cloudy"
-        elif re.search(r"\b(SCT|FEW)\d{3}\b", metar):
-            condition = "partly_cloudy"
-        elif re.search(r"\b(CLR|SKC)\b", metar):
-            condition = "clear"
-        else:
-            condition = "unknown"
-
-    return {
-        "station_id": "KHYA",
+    data = {
+        "station_id": STATION,
         "location_name": "Hyannis Area",
         "temperature_f": temperature_f,
         "wind_direction": wind_direction,
@@ -106,26 +91,12 @@ def parse_metar(metar):
         "observed_at": observed_at,
     }
 
-
-def main():
-    url = get_cycle_url()
-    print("Fetching METAR cycle:", url)
-
-    resp = requests.get(url, timeout=20)
-    resp.raise_for_status()
-
-    metar = extract_station_metar(resp.text, "KHYA")
-    if not metar:
-        raise RuntimeError("HYA METAR not found in cycle file")
-
-    data = parse_metar(metar)
-
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
 
     print("Updated", OUTPUT_FILE)
-    print("METAR:", metar)
 
 
 if __name__ == "__main__":
     main()
+
