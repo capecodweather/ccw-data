@@ -26,27 +26,27 @@ def c_to_f(c: float) -> int:
 
 def to_mph(value: float, unit_code: str | None) -> int:
     """
-    Convert value to mph based on NWS unitCode (UCUM-ish strings).
-    Common ones seen:
-      - unit:m_s-1   (meters/second)
-      - unit:km_h-1  (kilometers/hour)
-      - unit:kn      (knots)  [rare but handle it]
+    Convert NWS wind values to MPH.
+    Handles:
+      - km/h
+      - m/s
+      - knots
     """
+
     if value is None:
         return 0
 
-    u = (unit_code or "").strip().lower()
+    u = (unit_code or "").lower()
 
-    if u == "unit:m_s-1":
-        mph = value * 2.2369362920544
-    elif u == "unit:km_h-1":
-        mph = value * 0.62137119223733
-    elif u == "unit:kn":
-        mph = value * 1.1507794480235
+    if "km_h" in u:
+        mph = value * 0.621371
+    elif "m_s" in u:
+        mph = value * 2.23694
+    elif "kn" in u:
+        mph = value * 1.15078
     else:
-        # Safe fallback: many stations *should* be m/s,
-        # but we print debug so you can see what unitCode you got.
-        mph = value * 2.2369362920544
+        # Safe fallback
+        mph = value * 2.23694
 
     return int(round(mph))
 
@@ -64,28 +64,54 @@ def main():
 
     obs = resp.json()["properties"]
 
+    # -------------------
     # Temperature
+    # -------------------
+
     temp_c = obs.get("temperature", {}).get("value")
     temperature_f = c_to_f(temp_c) if temp_c is not None else 0
 
-    # Wind direction
-    wind_dir_deg = obs.get("windDirection", {}).get("value")
-    wind_direction = degrees_to_compass(float(wind_dir_deg)) if wind_dir_deg is not None else "--"
+    # -------------------
+    # Wind (sustained)
+    # -------------------
 
-    # Wind speed (sustained)
     ws = obs.get("windSpeed", {})
     wind_speed_val = ws.get("value")
     wind_speed_unit = ws.get("unitCode")
+
     wind_speed_mph = to_mph(wind_speed_val, wind_speed_unit)
 
-    # Wind gust
+    # -------------------
+    # Wind Direction
+    # -------------------
+
+    wind_dir_deg = obs.get("windDirection", {}).get("value")
+
+    # If calm or no data → CALM
+    if wind_speed_mph == 0 or wind_dir_deg is None:
+        wind_direction = "CALM"
+    else:
+        wind_direction = degrees_to_compass(float(wind_dir_deg))
+
+    # -------------------
+    # Wind Gust
+    # -------------------
+
     wg = obs.get("windGust", {})
     wind_gust_val = wg.get("value")
     wind_gust_unit = wg.get("unitCode")
-    wind_gust_mph = to_mph(wind_gust_val, wind_gust_unit) if wind_gust_val is not None else None
 
-    # Condition text → simplified category
+    if wind_gust_val is not None:
+        wind_gust_mph = to_mph(wind_gust_val, wind_gust_unit)
+    else:
+        wind_gust_mph = None
+
+    # -------------------
+    # Condition
+    # -------------------
+
     desc = (obs.get("textDescription") or "").lower()
+
     if "snow" in desc:
         condition = "snow"
     elif "rain" in desc or "shower" in desc or "drizzle" in desc:
@@ -99,16 +125,32 @@ def main():
     else:
         condition = "unknown"
 
+    # -------------------
     # Observation time
-    timestamp = obs.get("timestamp")  # ISO8601
-    observed_at = ""
-    if timestamp:
-        observed_at = datetime.fromisoformat(timestamp.replace("Z", "+00:00")).astimezone().isoformat()
+    # -------------------
 
-    # DEBUG: prints to help you verify the conversion
+    timestamp = obs.get("timestamp")
+    observed_at = ""
+
+    if timestamp:
+        observed_at = (
+            datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+            .astimezone()
+            .isoformat()
+        )
+
+    # -------------------
+    # Debug output
+    # -------------------
+
     print("RAW windSpeed:", wind_speed_val, wind_speed_unit)
     print("RAW windGust :", wind_gust_val, wind_gust_unit)
     print("MPH sustained:", wind_speed_mph, "gust:", wind_gust_mph)
+    print("Direction:", wind_direction)
+
+    # -------------------
+    # Output JSON
+    # -------------------
 
     data = {
         "station_id": STATION,
@@ -116,7 +158,7 @@ def main():
         "temperature_f": temperature_f,
         "wind_direction": wind_direction,
         "wind_speed_mph": wind_speed_mph,
-        "wind_gust_mph": wind_gust_mph,  # extra field (optional)
+        "wind_gust_mph": wind_gust_mph,
         "condition": condition,
         "observed_at": observed_at,
     }
@@ -129,3 +171,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
