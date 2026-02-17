@@ -5,6 +5,6 @@
   "wind_direction": "CALM",
   "wind_speed_mph": 0,
   "wind_gust_mph": null,
-  "condition": "clear",
-  "observed_at": "2026-02-17T09:10:00+00:00"
+  "condition": "cloudy",
+  "observed_at": "2026-02-17T10:10:00+00:00"
 }
