@@ -4,7 +4,7 @@
   "temperature_f": 55,
   "wind_direction": "S",
   "wind_speed_mph": 17,
-  "wind_gust_mph": 37,
+  "wind_gust_mph": 29,
   "condition": "rain",
-  "observed_at": "2026-03-17T00:40:00+00:00"
+  "observed_at": "2026-03-17T03:15:00+00:00"
 }
