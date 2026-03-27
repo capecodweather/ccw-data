@@ -4,7 +4,7 @@
   "temperature_f": 43,
   "wind_direction": "N",
   "wind_speed_mph": 14,
-  "wind_gust_mph": null,
+  "wind_gust_mph": 20,
   "condition": "cloudy",
-  "observed_at": "2026-03-27T14:30:00+00:00"
+  "observed_at": "2026-03-27T15:25:00+00:00"
 }
