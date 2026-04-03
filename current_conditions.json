@@ -4,7 +4,7 @@
   "temperature_f": 55,
   "wind_direction": "CALM",
   "wind_speed_mph": 0,
-  "wind_gust_mph": 32,
+  "wind_gust_mph": 36,
   "condition": "clear",
-  "observed_at": "2026-04-03T19:35:00+00:00"
+  "observed_at": "2026-04-03T20:00:00+00:00"
 }
