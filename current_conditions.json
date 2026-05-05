@@ -3,8 +3,8 @@
   "location_name": "Hyannis Area",
   "temperature_f": 61,
   "wind_direction": "SSW",
-  "wind_speed_mph": 20,
-  "wind_gust_mph": 29,
+  "wind_speed_mph": 18,
+  "wind_gust_mph": 25,
   "condition": "clear",
-  "observed_at": "2026-05-05T20:00:00+00:00"
+  "observed_at": "2026-05-05T21:00:00+00:00"
 }
