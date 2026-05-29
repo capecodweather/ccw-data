@@ -1,10 +1,10 @@
 {
   "station_id": "KHYA",
   "location_name": "Hyannis Area",
-  "temperature_f": 55,
-  "wind_direction": "NNW",
+  "temperature_f": 52,
+  "wind_direction": "W",
   "wind_speed_mph": 3,
   "wind_gust_mph": null,
   "condition": "clear",
-  "observed_at": "2026-05-29T06:05:00+00:00"
+  "observed_at": "2026-05-29T10:05:00+00:00"
 }
